@@ -1,0 +1,335 @@
+/* ====== Reset & Base ====== */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; overflow: hidden; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #0a0a0a;
+  color: #e0e0e0;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* ====== Screens ====== */
+.screen { display: none; height: 100vh; flex-direction: column; }
+.screen.active { display: flex; }
+
+/* ====== Intro Screen ====== */
+#intro-screen {
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 2rem;
+  background: linear-gradient(180deg, #0a1a0a 0%, #0a0a0a 100%);
+}
+.intro-content { max-width: 360px; }
+.logo {
+  position: relative;
+  width: 80px; height: 80px;
+  margin: 0 auto 1.5rem;
+}
+.logo-signal {
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: #00ff88;
+  transform: translate(-50%, -50%);
+  animation: pulse-signal 2s ease-out infinite;
+}
+.logo-signal.delay1 { animation-delay: 0.4s; }
+.logo-signal.delay2 { animation-delay: 0.8s; }
+@keyframes pulse-signal {
+  0% { width: 20px; height: 20px; opacity: 1; }
+  100% { width: 80px; height: 80px; opacity: 0; }
+}
+h1 { font-size: 2rem; color: #00ff88; margin-bottom: 0.3rem; letter-spacing: 2px; }
+.subtitle { font-size: 0.85rem; color: #666; margin-bottom: 1.2rem; }
+.desc { font-size: 0.8rem; color: #888; line-height: 1.5; margin-bottom: 2rem; }
+.btn-primary {
+  background: #00ff88;
+  color: #000;
+  border: none;
+  padding: 0.8rem 2.5rem;
+  border-radius: 2rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-primary:hover { background: #00cc6a; }
+.btn-primary:active { transform: scale(0.96); }
+.btn-primary:disabled { background: #333; color: #666; cursor: not-allowed; }
+.features {
+  display: flex;
+  gap: 1rem;
+  margin-top: 2rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.feature {
+  font-size: 0.7rem;
+  color: #888;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.feature .icon { font-size: 1rem; }
+
+/* ====== Main Screen ====== */
+#main-screen { background: #0a0a0a; overflow: hidden; }
+
+/* Camera Panel */
+#camera-panel {
+  position: relative;
+  height: 25vh;
+  min-height: 140px;
+  background: #111;
+  overflow: hidden;
+  border-bottom: 1px solid #222;
+}
+#camera-video {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+}
+#analysis-canvas { display: none; }
+#brightness-indicator {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 4px;
+  background: #222;
+}
+#brightness-fill {
+  height: 100%;
+  width: 0%;
+  background: #00ff88;
+  transition: width 0.05s;
+}
+#camera-label {
+  position: absolute;
+  top: 8px; left: 8px;
+  font-size: 0.65rem;
+  color: #00ff88;
+  background: rgba(0,0,0,0.6);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+#signal-dot {
+  position: absolute;
+  top: 8px; right: 8px;
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: #333;
+  transition: background 0.1s;
+}
+#signal-dot.active { background: #00ff88; box-shadow: 0 0 8px #00ff88; }
+
+/* Status Bar */
+#status-bar {
+  display: flex;
+  align-items: center;
+  padding: 0.4rem 0.8rem;
+  background: #111;
+  border-bottom: 1px solid #1a1a1a;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+}
+.status-disconnected { color: #ff4444; }
+.status-connecting { color: #ffaa00; animation: blink 1s infinite; }
+.status-connected { color: #00ff88; }
+@keyframes blink { 50% { opacity: 0.4; } }
+#mode-label { color: #666; flex: 1; text-align: right; }
+.btn-icon {
+  background: none; border: none; color: #666;
+  font-size: 1.1rem; cursor: pointer; padding: 0.2rem;
+}
+
+/* Messages */
+#messages {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.system-msg {
+  text-align: center;
+  font-size: 0.7rem;
+  color: #555;
+  padding: 0.4rem;
+}
+.msg {
+  max-width: 80%;
+  padding: 0.5rem 0.8rem;
+  border-radius: 1rem;
+  font-size: 0.85rem;
+  word-break: break-word;
+}
+.msg-sent {
+  align-self: flex-end;
+  background: #00ff88;
+  color: #000;
+  border-bottom-right-radius: 0.3rem;
+}
+.msg-received {
+  align-self: flex-start;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  border-bottom-left-radius: 0.3rem;
+}
+.msg-time {
+  font-size: 0.55rem;
+  color: #999;
+  margin-top: 0.2rem;
+}
+.msg-sent .msg-time { color: #006633; }
+
+/* Quick Actions */
+#quick-actions {
+  display: flex;
+  gap: 0.4rem;
+  padding: 0.5rem 0.8rem;
+  overflow-x: auto;
+  background: #0d0d0d;
+  border-top: 1px solid #1a1a1a;
+}
+.quick-btn {
+  flex-shrink: 0;
+  padding: 0.35rem 0.8rem;
+  border-radius: 1rem;
+  border: 1px solid #333;
+  background: #1a1a1a;
+  color: #ccc;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.quick-btn:active { background: #333; }
+.quick-btn.sos-btn {
+  border-color: #ff4444;
+  color: #ff4444;
+  font-weight: 700;
+}
+.quick-btn.sos-btn:active { background: #331111; }
+
+/* Input Area */
+#input-area {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.5rem 0.8rem;
+  background: #0d0d0d;
+}
+#msg-input {
+  flex: 1;
+  padding: 0.5rem 0.8rem;
+  border-radius: 1.5rem;
+  border: 1px solid #333;
+  background: #1a1a1a;
+  color: #e0e0e0;
+  font-size: 0.85rem;
+  outline: none;
+}
+#msg-input:focus { border-color: #00ff88; }
+#input-area .btn-primary {
+  padding: 0.5rem 1.2rem;
+  font-size: 0.85rem;
+}
+
+/* Signal Area */
+#signal-area {
+  position: relative;
+  height: 22vh;
+  min-height: 100px;
+  background: #000;
+  border-top: 1px solid #1a1a1a;
+}
+#signal-display {
+  width: 100%; height: 100%;
+  background: #000;
+  transition: background-color 0.02s;
+}
+#signal-display.on-green { background: #00ff88; }
+#signal-display.on-white { background: #ffffff; }
+#signal-display.on-cyan { background: #00ffff; }
+#signal-display.on-red { background: #ff0000; }
+#signal-status {
+  position: absolute;
+  bottom: 8px; left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.6rem;
+  color: #444;
+  pointer-events: none;
+}
+#sending-progress {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: #111;
+  display: none;
+}
+#sending-progress.active { display: block; }
+#progress-fill {
+  height: 100%;
+  width: 0%;
+  background: #00ff88;
+  transition: width 0.1s;
+}
+#progress-text {
+  position: absolute;
+  top: 8px; left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.7rem;
+  color: #00ff88;
+  white-space: nowrap;
+}
+
+/* ====== Settings Modal ====== */
+.modal {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+}
+.modal[hidden] { display: none; }
+.modal-content {
+  background: #1a1a1a;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  width: 90%;
+  max-width: 320px;
+}
+.modal-content h3 { margin-bottom: 1rem; color: #00ff88; }
+.modal-content label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-bottom: 1rem;
+  font-size: 0.8rem;
+  color: #999;
+}
+.modal-content select, .modal-content input[type="range"] {
+  width: 100%;
+  padding: 0.4rem;
+  background: #222;
+  color: #e0e0e0;
+  border: 1px solid #333;
+  border-radius: 0.5rem;
+  font-size: 0.85rem;
+}
+.modal-actions { text-align: center; margin-top: 1rem; }
+
+/* ====== Animations ====== */
+@keyframes flash-sos {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+.sending-active #signal-status { color: #00ff88; animation: flash-sos 0.5s infinite; }
+
+/* ====== Scrollbar ====== */
+#messages::-webkit-scrollbar { width: 3px; }
+#messages::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }

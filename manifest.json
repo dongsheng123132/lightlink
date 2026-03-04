@@ -1,0 +1,17 @@
+{
+  "name": "LightLink - 光通信",
+  "short_name": "LightLink",
+  "description": "手机间光通信 - Phone-to-Phone Light Communication",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a0a0a",
+  "theme_color": "#00ff88",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='40' fill='%2300ff88'/></svg>",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
