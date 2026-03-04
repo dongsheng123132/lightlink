@@ -214,6 +214,39 @@ h1 { font-size: 2rem; color: #00ff88; margin-bottom: 0.3rem; letter-spacing: 2px
 }
 .quick-btn.sos-btn:active { background: #331111; }
 
+/* Fight Mode Button */
+.quick-btn.fight-btn {
+  border-color: #ff8800;
+  color: #ff8800;
+  font-weight: 700;
+}
+.quick-btn.fight-btn:active { background: #332200; }
+.quick-btn.fight-btn.fight-active {
+  background: #ff8800;
+  color: #000;
+  animation: fight-pulse 0.8s infinite;
+}
+@keyframes fight-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255,136,0,0.4); }
+  50% { box-shadow: 0 0 12px 4px rgba(255,136,0,0.6); }
+}
+
+/* Fight mode messages */
+.msg-fight.msg-sent {
+  background: #ff6600;
+  animation: msg-shake 0.3s ease-out;
+}
+.msg-fight.msg-received {
+  background: #2a1a0a;
+  border: 1px solid #ff4444;
+  animation: msg-shake 0.3s ease-out;
+}
+@keyframes msg-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
 /* Input Area */
 #input-area {
   display: flex;
@@ -329,6 +362,17 @@ h1 { font-size: 2rem; color: #00ff88; margin-bottom: 0.3rem; letter-spacing: 2px
   50% { opacity: 1; }
 }
 .sending-active #signal-status { color: #00ff88; animation: flash-sos 0.5s infinite; }
+
+/* ====== Torch Toggle ====== */
+#torch-label-wrap {
+  flex-direction: row !important;
+  align-items: center;
+  justify-content: space-between;
+}
+#torch-toggle {
+  width: auto;
+  accent-color: #00ff88;
+}
 
 /* ====== Scrollbar ====== */
 #messages::-webkit-scrollbar { width: 3px; }

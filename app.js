@@ -1,6 +1,7 @@
 // ============================================================
 // LightLink - 手机间光通信
 // Protocol: SOS Handshake → Morse Code / Binary Light Comm
+// Supports: Screen flash + Rear flashlight (torch) mode
 // ============================================================
 
 // ====== MORSE CODE TABLE ======
@@ -26,7 +27,56 @@ for (const [ch, code] of Object.entries(MORSE_TABLE)) {
 // Quick message dictionary (short code → display)
 const QUICK_MESSAGES = {
   'HI': '你好 (HI)', 'OK': '收到 (OK)', 'HELP': '帮助 (HELP)',
-  'YES': '是 (YES)', 'NO': '否 (NO)', 'SOS': 'SOS'
+  'YES': '是 (YES)', 'NO': '否 (NO)', 'SOS': 'SOS',
+  'SHUT UP': '闭嘴! (SHUT UP)', 'NO U': '你才是! (NO U)',
+  'LOL': '哈哈哈 (LOL)', 'BYE': '走开! (BYE)',
+  'FIGHT': '来打我啊 (FIGHT)', 'WEAK': '你太弱了 (WEAK)',
+  'SMART': '我比你聪明 (SMART)', 'SLOW': '你好慢啊 (SLOW)',
+  'UGLY': '你的光好丑 (UGLY)', 'WIN': '我赢了 (WIN)',
+  'LOSE': '你输了 (LOSE)', 'MAD': '气死你 (MAD)',
+  'CRY': '哭了吧 (CRY)', 'HAHA': '笑死我了 (HAHA)'
+};
+
+// ====== FIGHT MODE SCRIPTS ======
+const FIGHT_SCRIPTS = {
+  // Each script is an array of messages to send, picking randomly
+  opener: [
+    'HI', 'U THERE', 'WAKE UP', 'HEY', 'YO'
+  ],
+  taunt: [
+    'SLOW', 'WEAK', 'UGLY', 'U MAD',
+    'LOL', 'TOO EZ', 'BORING', 'YAWN',
+    'TRY HARD', 'SO BAD', 'NO SKILL', 'GG EZ'
+  ],
+  rage: [
+    'SHUT UP', 'NO U', 'FIGHT', 'COME ON',
+    'U LOSE', 'I WIN', 'MAD', 'CRY',
+    'HAHA', 'GET GOOD', 'BYE', 'RAGE QUIT'
+  ],
+  // Auto-reply map: when receiving certain words, reply with these
+  autoReply: {
+    'HI':       ['SHUT UP', 'NO U', 'GO AWAY'],
+    'SHUT UP':  ['NO U', 'U SHUT UP', 'MAKE ME'],
+    'NO U':     ['NO U', 'FIGHT', 'LOL'],
+    'SLOW':     ['U SLOW', 'NO U SLOW', 'SHUT UP'],
+    'WEAK':     ['U WEAK', 'FIGHT ME', 'HAHA'],
+    'UGLY':     ['NO U UGLY', 'SHUT UP', 'CRY'],
+    'FIGHT':    ['COME ON', 'SCARED', 'LOL'],
+    'LOL':      ['NOT FUNNY', 'SHUT UP', 'HAHA'],
+    'HAHA':     ['STOP', 'NOT FUNNY', 'MAD'],
+    'WIN':      ['NO U LOSE', 'NEVER', 'HAHA'],
+    'LOSE':     ['NO U', 'NEVER', 'FIGHT'],
+    'MAD':      ['NOT MAD', 'U MAD', 'CRY'],
+    'CRY':      ['NOT CRY', 'U CRY', 'HAHA'],
+    'BYE':      ['WAIT', 'COME BACK', 'SCARED'],
+    'GG EZ':    ['SHUT UP', 'REMATCH', 'NO'],
+  },
+  // Escalation: messages get angrier over time
+  getLevel(msgCount) {
+    if (msgCount < 3) return 'opener';
+    if (msgCount < 8) return 'taunt';
+    return 'rage';
+  }
 };
 
 // ====== SPEED PROFILES ======
@@ -49,16 +99,57 @@ class SignalSender {
     this.aborted = false;
     this.speed = SPEED_PROFILES.medium;
     this.colorClass = SIGNAL_COLORS.green;
+    this.torchTrack = null; // MediaStreamTrack for flashlight
+    this.useTorch = false;
   }
 
   setSpeed(profile) { this.speed = SPEED_PROFILES[profile] || SPEED_PROFILES.medium; }
   setColor(color) { this.colorClass = SIGNAL_COLORS[color] || SIGNAL_COLORS.green; }
 
+  async enableTorch() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' }
+      });
+      this.torchTrack = stream.getVideoTracks()[0];
+      // Test if torch is supported
+      const caps = this.torchTrack.getCapabilities();
+      if (caps.torch) {
+        this.useTorch = true;
+        // Start with torch off
+        await this.torchTrack.applyConstraints({ advanced: [{ torch: false }] });
+        return true;
+      } else {
+        // No torch support, release track
+        this.torchTrack.stop();
+        this.torchTrack = null;
+        return false;
+      }
+    } catch (err) {
+      console.warn('Torch not available:', err);
+      return false;
+    }
+  }
+
+  disableTorch() {
+    if (this.torchTrack) {
+      this.torchTrack.stop();
+      this.torchTrack = null;
+    }
+    this.useTorch = false;
+  }
+
   async flashOn(duration) {
     if (this.aborted) return;
+    if (this.useTorch && this.torchTrack) {
+      await this.torchTrack.applyConstraints({ advanced: [{ torch: true }] });
+    }
     this.display.className = this.colorClass;
     await this._wait(duration);
     this.display.className = '';
+    if (this.useTorch && this.torchTrack) {
+      await this.torchTrack.applyConstraints({ advanced: [{ torch: false }] });
+    }
   }
 
   async _wait(ms) {
@@ -73,6 +164,9 @@ class SignalSender {
     this.sending = false;
     clearTimeout(this._currentTimeout);
     this.display.className = '';
+    if (this.useTorch && this.torchTrack) {
+      this.torchTrack.applyConstraints({ advanced: [{ torch: false }] }).catch(() => {});
+    }
   }
 
   // Send SOS: ···---···
@@ -194,7 +288,7 @@ class SignalReceiver {
     this.preambleDetected = false;
   }
 
-  async start(facingMode = 'user') {
+  async start(facingMode = 'environment') {
     try {
       this.stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode, width: { ideal: 320 }, height: { ideal: 240 } },
@@ -239,7 +333,7 @@ class SignalReceiver {
     const now = performance.now();
     this.ctx.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height);
 
-    // Analyze center region for green channel brightness
+    // Analyze center region brightness
     const cw = this.canvas.width;
     const ch = this.canvas.height;
     const rx = Math.floor(cw * 0.2);
@@ -250,12 +344,11 @@ class SignalReceiver {
     const imageData = this.ctx.getImageData(rx, ry, rw, rh);
     const data = imageData.data;
 
-    // Calculate green-weighted brightness
+    // Calculate overall brightness (torch is white, so use all channels equally)
     let totalBrightness = 0;
     const pixelCount = data.length / 4;
     for (let i = 0; i < data.length; i += 4) {
-      // Weighted: green channel is primary signal
-      totalBrightness += data[i] * 0.2 + data[i + 1] * 0.6 + data[i + 2] * 0.2;
+      totalBrightness += data[i] * 0.3 + data[i + 1] * 0.4 + data[i + 2] * 0.3;
     }
     const brightness = totalBrightness / pixelCount;
 
@@ -455,6 +548,11 @@ class App {
     this.sending = false;
     this.sosReceived = false;
     this.sosSent = false;
+    this.fightMode = false;
+    this.fightMsgCount = 0;
+    this.fightTimer = null;
+    this.torchAvailable = false;
+    this.torchEnabled = false;
 
     // Elements
     this.introScreen = document.getElementById('intro-screen');
@@ -481,7 +579,7 @@ class App {
 
     // Settings
     this.currentSpeed = 'medium';
-    this.currentCamera = 'user';
+    this.currentCamera = 'environment';
     this.currentColor = 'green';
 
     this._bindEvents();
@@ -497,6 +595,7 @@ class App {
         const action = btn.dataset.action;
         const msg = btn.dataset.msg;
         if (action === 'sos') this._handleSOS();
+        else if (action === 'fight') this._toggleFightMode();
         else if (msg) this._handleSendMessage(msg);
       });
     });
@@ -528,6 +627,14 @@ class App {
       document.getElementById('sensitivity-value').textContent = e.target.value;
     });
 
+    // Torch toggle
+    const torchToggle = document.getElementById('torch-toggle');
+    if (torchToggle) {
+      torchToggle.addEventListener('change', (e) => {
+        this._toggleTorch(e.target.checked);
+      });
+    }
+
     // Receiver callbacks
     this.receiver.onBrightness = (val) => {
       const pct = Math.min(100, (val / 255) * 100);
@@ -554,6 +661,11 @@ class App {
       const display = QUICK_MESSAGES[text] || text;
       this._addMessage(display, 'received');
       this._vibrate();
+
+      // Fight mode auto-reply
+      if (this.fightMode) {
+        this._fightAutoReply(text);
+      }
     };
   }
 
@@ -561,14 +673,51 @@ class App {
     this.introScreen.classList.remove('active');
     this.mainScreen.classList.add('active');
 
-    // Start camera
+    // Try to enable torch
+    const hasTorch = await this.sender.enableTorch();
+    this.torchAvailable = hasTorch;
+    const torchToggle = document.getElementById('torch-toggle');
+    const torchLabel = document.getElementById('torch-label');
+    if (hasTorch) {
+      this.torchEnabled = true;
+      if (torchToggle) torchToggle.checked = true;
+      if (torchLabel) torchLabel.textContent = '闪光灯模式 (已启用)';
+      this._addSystemMessage('闪光灯已启用! 信号更强更远。');
+    } else {
+      if (torchToggle) torchToggle.disabled = true;
+      if (torchLabel) torchLabel.textContent = '闪光灯 (不支持)';
+      this._addSystemMessage('闪光灯不可用，使用屏幕闪光模式。');
+    }
+
+    // Start camera (default to rear)
     const ok = await this.receiver.start(this.currentCamera);
     if (!ok) {
-      this._addSystemMessage('无法访问摄像头。请检查权限设置。');
-      return;
+      // Fallback to front camera
+      this.currentCamera = 'user';
+      const ok2 = await this.receiver.start('user');
+      if (!ok2) {
+        this._addSystemMessage('无法访问摄像头。请检查权限设置。');
+        return;
+      }
+      this._addSystemMessage('后置摄像头不可用，已切换前置。');
     }
-    this._addSystemMessage('摄像头已启动。请点击 SOS 建立连接。');
+    this._addSystemMessage('摄像头已启动。点击 SOS 建立连接。');
     this.modeLabel.textContent = '接收中...';
+  }
+
+  async _toggleTorch(enabled) {
+    if (enabled && this.torchAvailable) {
+      const ok = await this.sender.enableTorch();
+      this.torchEnabled = ok;
+      this.sender.useTorch = ok;
+      const label = document.getElementById('torch-label');
+      if (label) label.textContent = ok ? '闪光灯模式 (已启用)' : '闪光灯 (失败)';
+    } else {
+      this.sender.useTorch = false;
+      this.torchEnabled = false;
+      const label = document.getElementById('torch-label');
+      if (label) label.textContent = '闪光灯模式 (已关闭)';
+    }
   }
 
   _applySettings() {
@@ -619,6 +768,74 @@ class App {
     }
   }
 
+  // ====== FIGHT MODE ======
+  _toggleFightMode() {
+    this.fightMode = !this.fightMode;
+    const btn = document.querySelector('[data-action="fight"]');
+
+    if (this.fightMode) {
+      this.fightMsgCount = 0;
+      if (btn) btn.classList.add('fight-active');
+      this._addSystemMessage('--- 吵架模式已开启! 准备互怼 ---');
+      this._updateStatus(this.connected ? 'connected' : 'disconnected', '吵架模式');
+
+      // Start first taunt after a short delay
+      if (this.connected && !this.sender.sending) {
+        this.fightTimer = setTimeout(() => this._fightSendNext(), 1500);
+      }
+    } else {
+      if (btn) btn.classList.remove('fight-active');
+      clearTimeout(this.fightTimer);
+      this._addSystemMessage('--- 吵架模式已关闭，和平了 ---');
+      this._updateStatus(this.connected ? 'connected' : 'disconnected',
+                         this.connected ? '已连接' : '等待中');
+    }
+  }
+
+  _fightSendNext() {
+    if (!this.fightMode || this.sender.sending) return;
+
+    const level = FIGHT_SCRIPTS.getLevel(this.fightMsgCount);
+    const pool = FIGHT_SCRIPTS[level];
+    const msg = pool[Math.floor(Math.random() * pool.length)];
+
+    this.fightMsgCount++;
+    this._handleSendMessage(msg);
+  }
+
+  _fightAutoReply(receivedText) {
+    if (!this.fightMode || this.sender.sending) return;
+
+    // Find a matching auto-reply
+    const upperText = receivedText.trim().toUpperCase();
+    let replyPool = null;
+
+    // Check auto-reply map
+    for (const [key, replies] of Object.entries(FIGHT_SCRIPTS.autoReply)) {
+      if (upperText.includes(key)) {
+        replyPool = replies;
+        break;
+      }
+    }
+
+    // Fallback to level-based pool
+    if (!replyPool) {
+      const level = FIGHT_SCRIPTS.getLevel(this.fightMsgCount);
+      replyPool = FIGHT_SCRIPTS[level];
+    }
+
+    const reply = replyPool[Math.floor(Math.random() * replyPool.length)];
+    this.fightMsgCount++;
+
+    // Random delay 2-5 seconds to feel natural
+    const delay = 2000 + Math.random() * 3000;
+    this.fightTimer = setTimeout(() => {
+      if (this.fightMode && !this.sender.sending) {
+        this._handleSendMessage(reply);
+      }
+    }, delay);
+  }
+
   async _handleSendMessage(text) {
     if (this.sender.sending) return;
 
@@ -639,13 +856,24 @@ class App {
     this.progressEl.classList.remove('active');
     this.progressFill.style.width = '0%';
     this.progressText.textContent = '';
-    this._updateStatus(this.connected ? 'connected' : 'disconnected',
-                       this.connected ? '已连接' : '等待中');
+
+    const label = this.fightMode ? '吵架模式' : (this.connected ? '已连接' : '等待中');
+    this._updateStatus(this.connected ? 'connected' : 'disconnected', label);
+
+    // In fight mode, queue next message if no reply comes
+    if (this.fightMode) {
+      this.fightTimer = setTimeout(() => {
+        if (this.fightMode && !this.sender.sending) {
+          this._fightSendNext();
+        }
+      }, 5000 + Math.random() * 3000);
+    }
   }
 
   _addMessage(text, type) {
     const div = document.createElement('div');
     div.className = `msg msg-${type}`;
+    if (this.fightMode) div.classList.add('msg-fight');
     const time = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     div.innerHTML = `${this._escapeHtml(text)}<div class="msg-time">${time}</div>`;
     this.messagesEl.appendChild(div);

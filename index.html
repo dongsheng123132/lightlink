@@ -23,11 +23,11 @@
         </div>
         <h1>LightLink</h1>
         <p class="subtitle">手机间光通信 / Phone-to-Phone Light Comm</p>
-        <p class="desc">用屏幕闪光和摄像头实现两台手机之间的无网络通信。<br>SOS 握手建立连接，随后自动切换高效光通信。</p>
+        <p class="desc">用闪光灯/屏幕闪光和摄像头实现两台手机之间的无网络通信。<br>SOS 握手建立连接，还能开启吵架模式互怼!</p>
         <button id="btn-start" class="btn-primary">开始通信</button>
         <div class="features">
           <div class="feature"><span class="icon">&#x1f4f1;</span> 无需网络/蓝牙</div>
-          <div class="feature"><span class="icon">&#x1f4a1;</span> 屏幕即信号源</div>
+          <div class="feature"><span class="icon">&#x1f4a1;</span> 闪光灯/屏幕信号</div>
           <div class="feature"><span class="icon">&#x1f4f7;</span> 摄像头即接收器</div>
         </div>
       </div>
@@ -43,7 +43,7 @@
         <div id="brightness-indicator">
           <div id="brightness-fill"></div>
         </div>
-        <div id="camera-label">接收区 - 对准对方屏幕</div>
+        <div id="camera-label">接收区 - 对准对方闪光灯</div>
         <div id="signal-dot"></div>
       </div>
 
@@ -56,17 +56,19 @@
 
       <!-- Message Area -->
       <div id="messages">
-        <div class="system-msg">将两台手机屏幕面对面放置，点击 SOS 建立连接</div>
+        <div class="system-msg">将两台手机背对背放置 (闪光灯对摄像头)，点击 SOS 建立连接</div>
       </div>
 
       <!-- Quick Actions -->
       <div id="quick-actions">
         <button class="quick-btn sos-btn" data-action="sos">SOS</button>
+        <button class="quick-btn fight-btn" data-action="fight">吵架模式</button>
         <button class="quick-btn" data-msg="HI">你好</button>
         <button class="quick-btn" data-msg="OK">收到</button>
-        <button class="quick-btn" data-msg="HELP">帮助</button>
-        <button class="quick-btn" data-msg="YES">是</button>
-        <button class="quick-btn" data-msg="NO">否</button>
+        <button class="quick-btn" data-msg="SHUT UP">闭嘴</button>
+        <button class="quick-btn" data-msg="NO U">你才是</button>
+        <button class="quick-btn" data-msg="HAHA">哈哈哈</button>
+        <button class="quick-btn" data-msg="WEAK">你太弱</button>
       </div>
 
       <!-- Text Input -->
@@ -106,8 +108,8 @@
         <label>
           摄像头
           <select id="camera-select">
+            <option value="environment" selected>后置 (推荐)</option>
             <option value="user">前置</option>
-            <option value="environment">后置</option>
           </select>
         </label>
         <label>
@@ -117,6 +119,10 @@
             <option value="white">白色</option>
             <option value="cyan">青色</option>
           </select>
+        </label>
+        <label id="torch-label-wrap">
+          <span id="torch-label">闪光灯模式</span>
+          <input type="checkbox" id="torch-toggle" checked>
         </label>
         <div class="modal-actions">
           <button id="btn-close-settings" class="btn-primary">确定</button>
